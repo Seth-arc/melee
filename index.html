@@ -2,8 +2,11 @@
 <html>
   <head>
     <meta charset="UTF-8" />
+    <!-- Ensure proper scaling on all devices -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Soundwave Animation - Melee</title>
     <style>
+      /* Base styles: a centered, flexible layout */
       body {
         background: transparent;
         margin: 0;
@@ -13,10 +16,17 @@
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        height: 100vh;
+        min-height: 100vh;
         color: #fff;
+        box-sizing: border-box;
       }
-      /* Transparent canvas container */
+      
+      /* Hide the default audio element */
+      audio {
+        display: none;
+      }
+      
+      /* Responsive canvas with fixed height */
       canvas {
         width: 100%;
         height: 200px;
@@ -24,13 +34,27 @@
         background: transparent;
         margin: 20px 0;
       }
-      /* Minimalist green audio player controls */
+      
+      /* Time display styling */
+      #timeDisplay {
+        font-size: 14px;
+        margin: 10px 0;
+        text-align: center;
+      }
+      
+      /* Audio player controls container */
       #audioControls {
         display: flex;
         flex-wrap: wrap;
         gap: 10px;
         justify-content: center;
+        width: 100%;
+        max-width: 600px;
+        padding: 0 10px;
+        box-sizing: border-box;
       }
+      
+      /* Button design with flexible sizing */
       #audioControls button {
         background: transparent;
         border: 2px solid #026447;
@@ -40,19 +64,46 @@
         border-radius: 4px;
         cursor: pointer;
         transition: background 0.2s, color 0.2s;
+        flex: 1;
+        min-width: 80px;
       }
+      
       #audioControls button:hover {
         background: #026447;
         color: #fff;
       }
+      
+      /* Media queries for smaller screens adjustments */
+      @media (max-width: 600px) {
+        canvas {
+          height: 150px;
+        }
+        #audioControls button {
+          padding: 6px 12px;
+          font-size: 12px;
+        }
+      }
+      
+      @media (max-width: 400px) {
+        #audioControls button {
+          min-width: 70px;
+        }
+      }
     </style>
   </head>
   <body>
-    <!-- Audio file "melee.mp3" must be in the same directory -->
+    <!-- Audio file "melee.mp3" should be in the same directory -->
     <audio id="audioElement" src="melee.mp3" crossOrigin="anonymous"></audio>
     <canvas id="waveCanvas"></canvas>
-
-    <!-- Audio player tools -->
+    
+    <!-- Time display for elapsed, total, and time left -->
+    <div id="timeDisplay">
+      <span id="currentTime">0:00</span> /
+      <span id="totalTime">0:00</span>
+      (<span id="timeLeft">-0:00</span>)
+    </div>
+    
+    <!-- Audio player controls -->
     <div id="audioControls">
       <button id="playBtn">Play</button>
       <button id="pauseBtn">Pause</button>
@@ -62,38 +113,69 @@
       <button id="volDownBtn">Down</button>
       <button id="volUpBtn">Up</button>
     </div>
-
+    
     <script>
       // Get references to DOM elements
       const audioElement = document.getElementById("audioElement");
       const canvas = document.getElementById("waveCanvas");
       const ctx = canvas.getContext("2d");
-
-      // Set canvas dimensions
-      canvas.width = window.innerWidth;
-      canvas.height = 200;
-
-      // Create AudioContext and connect nodes
+      
+      // Time display elements
+      const currentTimeDisplay = document.getElementById("currentTime");
+      const totalTimeDisplay   = document.getElementById("totalTime");
+      const timeLeftDisplay    = document.getElementById("timeLeft");
+      
+      // Helper function: set canvas dimensions responsively
+      function setCanvasSize() {
+        canvas.width = window.innerWidth;
+        canvas.height = 200; // Fixed height; adjusted via media queries if needed
+      }
+      setCanvasSize();
+      
+      // Update canvas size when the window is resized
+      window.addEventListener("resize", setCanvasSize);
+      
+      // Create the AudioContext and set up the audio graph
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const source = audioCtx.createMediaElementSource(audioElement);
-      const analyser = audioCtx.createAnalyser();
+      const source    = audioCtx.createMediaElementSource(audioElement);
+      const analyser  = audioCtx.createAnalyser();
       analyser.fftSize = 2048;
       source.connect(analyser);
       analyser.connect(audioCtx.destination);
-
+      
       const bufferLength = analyser.frequencyBinCount;
       const dataArray = new Uint8Array(bufferLength);
-
-      // Function to draw soundwave in green
+      
+      // Function to format seconds as minutes:seconds (m:ss)
+      function formatTime(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+      }
+      
+      // Update total duration once metadata is loaded
+      audioElement.addEventListener("loadedmetadata", () => {
+        totalTimeDisplay.textContent = formatTime(audioElement.duration);
+      });
+      
+      // Update time display during playback
+      audioElement.addEventListener("timeupdate", () => {
+        const currentTime = audioElement.currentTime;
+        const totalTime   = audioElement.duration;
+        currentTimeDisplay.textContent = formatTime(currentTime);
+        timeLeftDisplay.textContent = `-${formatTime(totalTime - currentTime)}`;
+      });
+      
+      // Draw function to render the soundwave in green
       function draw() {
         requestAnimationFrame(draw);
         analyser.getByteTimeDomainData(dataArray);
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-
+      
         ctx.lineWidth = 2;
         ctx.strokeStyle = "#026447";
         ctx.beginPath();
-
+      
         const sliceWidth = canvas.width / bufferLength;
         let x = 0;
         for (let i = 0; i < bufferLength; i++) {
@@ -109,22 +191,23 @@
         ctx.lineTo(canvas.width, canvas.height / 2);
         ctx.stroke();
       }
-
-      // Ensure AudioContext resumes on a user gesture
+      
+      // Resume AudioContext on a user gesture if needed
       document.body.addEventListener("click", () => {
         if (audioCtx.state === "suspended") {
           audioCtx.resume();
         }
       });
-
-      // Audio control button handlers
-      const playBtn = document.getElementById("playBtn");
-      const pauseBtn = document.getElementById("pauseBtn");
-      const stopBtn = document.getElementById("stopBtn");
-      const rewindBtn = document.getElementById("rewindBtn");
-      const ffBtn = document.getElementById("ffBtn");
+      
+      // Audio control buttons
+      const playBtn    = document.getElementById("playBtn");
+      const pauseBtn   = document.getElementById("pauseBtn");
+      const stopBtn    = document.getElementById("stopBtn");
+      const rewindBtn  = document.getElementById("rewindBtn");
+      const ffBtn      = document.getElementById("ffBtn");
       const volDownBtn = document.getElementById("volDownBtn");
-
+      const volUpBtn   = document.getElementById("volUpBtn");
+      
       playBtn.addEventListener("click", () => {
         if (audioCtx.state === "suspended") {
           audioCtx.resume();
@@ -132,20 +215,20 @@
         audioElement.play();
         draw();
       });
-
+      
       pauseBtn.addEventListener("click", () => {
         audioElement.pause();
       });
-
+      
       stopBtn.addEventListener("click", () => {
         audioElement.pause();
         audioElement.currentTime = 0;
       });
-
+      
       rewindBtn.addEventListener("click", () => {
         audioElement.currentTime = Math.max(audioElement.currentTime - 10, 0);
       });
-
+      
       ffBtn.addEventListener("click", () => {
         if (audioElement.duration) {
           audioElement.currentTime = Math.min(
@@ -154,9 +237,13 @@
           );
         }
       });
-
+      
       volDownBtn.addEventListener("click", () => {
         audioElement.volume = Math.max(audioElement.volume - 0.1, 0);
+      });
+      
+      volUpBtn.addEventListener("click", () => {
+        audioElement.volume = Math.min(audioElement.volume + 0.1, 1);
       });
     </script>
   </body>
