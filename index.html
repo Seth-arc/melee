@@ -2,65 +2,59 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <!-- Ensure proper scaling on all devices -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Soundwave Animation - Melee</title>
     <style>
-      /* Base styles: a centered, flexible layout */
       body {
         background: transparent;
-  margin: 0;
-  padding: 0;
-  font-family: sans-serif;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start; /* Align items at the top */
-  align-items: center;         /* Center items horizontally */
-  height: 180px;
-  color: #fff;
-  box-sizing: border-box;
-}
+        margin: 0;
+        padding: 0;
+        font-family: sans-serif;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: center;
+        height: 160px; /* Reduced height to prevent scrolling */
+        color: #fff;
+        box-sizing: border-box;
+        overflow: hidden; /* Prevent scrolling */
+      }
       
-      /* Hide the default audio element */
       audio {
         display: none;
       }
       
-      /* Responsive canvas with fixed height */
       canvas {
         width: 350px;
-        height: 0px;
+        height: 50px;
         display: block;
         background: transparent;
-        margin: 20px 0;
+        margin: 10px 0; /* Reduced margin */
       }
       
-      /* Time display styling */
       #timeDisplay {
         font-size: 14px;
-        margin: 10px 0;
+        margin: 5px 0; /* Reduced margin */
         text-align: center;
         color: #487769;
       }
       
-      /* Audio player controls container */
       #audioControls {
         display: flex;
         flex-wrap: wrap;
-        gap: 10px;
+        gap: 5px; /* Reduced gap */
         justify-content: center;
         width: 100%;
         max-width: 600px;
-        padding: 0 10px;
+        padding: 0 5px; /* Reduced padding */
         box-sizing: border-box;
       }
       
-      /* Button design with flexible sizing */
       #audioControls button {
         background: transparent;
         border: 2px solid #026447;
         color: #026447;
-        padding: 8px 16px;
+        padding: 6px 12px; /* Reduced padding */
         font-size: 14px;
         border-radius: 4px;
         cursor: pointer;
@@ -74,13 +68,12 @@
         color: #fff;
       }
       
-      /* Media queries for smaller screens adjustments */
       @media (max-width: 600px) {
         canvas {
-          height: 150px;
+          height: 40px; /* Reduced height */
         }
         #audioControls button {
-          padding: 6px 12px;
+          padding: 4px 8px; /* Reduced padding */
           font-size: 12px;
         }
       }
@@ -93,18 +86,15 @@
     </style>
   </head>
   <body>
-    <!-- Audio file "melee.mp3" should be in the same directory -->
     <audio id="audioElement" src="melee.mp3" crossOrigin="anonymous"></audio>
     <canvas id="waveCanvas"></canvas>
     
-    <!-- Time display for elapsed, total, and time left -->
     <div id="timeDisplay">
       <span id="currentTime">0:00</span> /
       <span id="totalTime">0:00</span>
       (<span id="timeLeft">-0:00</span>)
     </div>
     
-    <!-- Audio player controls -->
     <div id="audioControls">
       <button id="playBtn">Play</button>
       <button id="pauseBtn">Pause</button>
@@ -116,30 +106,25 @@
     </div>
     
     <script>
-      // Get references to DOM elements
       const audioElement = document.getElementById("audioElement");
       const canvas = document.getElementById("waveCanvas");
       const ctx = canvas.getContext("2d");
       
-      // Time display elements
       const currentTimeDisplay = document.getElementById("currentTime");
-      const totalTimeDisplay   = document.getElementById("totalTime");
-      const timeLeftDisplay    = document.getElementById("timeLeft");
+      const totalTimeDisplay = document.getElementById("totalTime");
+      const timeLeftDisplay = document.getElementById("timeLeft");
       
-      // Helper function: set canvas dimensions responsively
       function setCanvasSize() {
-        canvas.width = window.innerWidth;
-        canvas.height = 50; // Fixed height; adjusted via media queries if needed
+        canvas.width = canvas.offsetWidth;
+        canvas.height = 50;
       }
       setCanvasSize();
       
-      // Update canvas size when the window is resized
       window.addEventListener("resize", setCanvasSize);
       
-      // Create the AudioContext and set up the audio graph
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const source    = audioCtx.createMediaElementSource(audioElement);
-      const analyser  = audioCtx.createAnalyser();
+      const source = audioCtx.createMediaElementSource(audioElement);
+      const analyser = audioCtx.createAnalyser();
       analyser.fftSize = 2048;
       source.connect(analyser);
       analyser.connect(audioCtx.destination);
@@ -147,27 +132,23 @@
       const bufferLength = analyser.frequencyBinCount;
       const dataArray = new Uint8Array(bufferLength);
       
-      // Function to format seconds as minutes:seconds (m:ss)
       function formatTime(seconds) {
         const mins = Math.floor(seconds / 60);
         const secs = Math.floor(seconds % 60);
         return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
       }
       
-      // Update total duration once metadata is loaded
       audioElement.addEventListener("loadedmetadata", () => {
         totalTimeDisplay.textContent = formatTime(audioElement.duration);
       });
       
-      // Update time display during playback
       audioElement.addEventListener("timeupdate", () => {
         const currentTime = audioElement.currentTime;
-        const totalTime   = audioElement.duration;
+        const totalTime = audioElement.duration;
         currentTimeDisplay.textContent = formatTime(currentTime);
         timeLeftDisplay.textContent = `-${formatTime(totalTime - currentTime)}`;
       });
       
-      // Draw function to render the soundwave in green
       function draw() {
         requestAnimationFrame(draw);
         analyser.getByteTimeDomainData(dataArray);
@@ -193,21 +174,19 @@
         ctx.stroke();
       }
       
-      // Resume AudioContext on a user gesture if needed
       document.body.addEventListener("click", () => {
         if (audioCtx.state === "suspended") {
           audioCtx.resume();
         }
       });
       
-      // Audio control buttons
-      const playBtn    = document.getElementById("playBtn");
-      const pauseBtn   = document.getElementById("pauseBtn");
-      const stopBtn    = document.getElementById("stopBtn");
-      const rewindBtn  = document.getElementById("rewindBtn");
-      const ffBtn      = document.getElementById("ffBtn");
+      const playBtn = document.getElementById("playBtn");
+      const pauseBtn = document.getElementById("pauseBtn");
+      const stopBtn = document.getElementById("stopBtn");
+      const rewindBtn = document.getElementById("rewindBtn");
+      const ffBtn = document.getElementById("ffBtn");
       const volDownBtn = document.getElementById("volDownBtn");
-      const volUpBtn   = document.getElementById("volUpBtn");
+      const volUpBtn = document.getElementById("volUpBtn");
       
       playBtn.addEventListener("click", () => {
         if (audioCtx.state === "suspended") {
